@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Use standalone output to avoid static prerendering issues with client components
+  output: 'standalone',
+
   // Optimize for faster builds
   swcMinify: true,
 
