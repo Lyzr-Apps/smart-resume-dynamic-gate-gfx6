@@ -1,0 +1,68 @@
+{
+  "agent_name": "Resume Improvement Coordinator",
+  "agent_id": "699968ff72a2e3b0eaab98d0",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": true,
+  "response_schema": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "AgentResponse",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "improved_resume": {
+            "type": "string",
+            "description": "The complete improved resume text combining ATS optimization and content enhancement"
+          },
+          "ats_score": {
+            "type": "number",
+            "description": "ATS readiness score from 0-100"
+          },
+          "score_justification": {
+            "type": "string",
+            "description": "Brief explanation of the ATS score"
+          },
+          "changes_made": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "original": { "type": "string" },
+                "improved": { "type": "string" },
+                "reason": { "type": "string" }
+              },
+              "required": ["original", "improved", "reason"],
+              "additionalProperties": false
+            },
+            "description": "List of all changes made with before/after and reasoning"
+          },
+          "keywords_added": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Keywords injected for ATS optimization"
+          },
+          "linkedin_headline": {
+            "type": "string",
+            "description": "Generated LinkedIn headline"
+          },
+          "linkedin_summary": {
+            "type": "string",
+            "description": "Generated LinkedIn summary"
+          },
+          "job_board_bio": {
+            "type": "string",
+            "description": "Generated job board profile bio"
+          },
+          "improvement_summary": {
+            "type": "string",
+            "description": "Overall summary of all improvements made"
+          }
+        },
+        "required": ["improved_resume", "ats_score", "score_justification", "changes_made", "keywords_added", "linkedin_headline", "linkedin_summary", "job_board_bio", "improvement_summary"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "nodes": [
+    {
+      "id": "input_node",
+      "type": "Input",
+      "label": "Resume Upload",
+      "nodeCategory": "input"
+    },
+    {
+      "id": "manager_agent",
+      "type": "Agent",
+      "label": "Resume Improvement Coordinator",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "ats_agent",
+      "type": "Agent",
+      "label": "ATS Optimizer Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "content_agent",
+      "type": "Agent",
+      "label": "Content Enhancement Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "profile_agent",
+      "type": "Agent",
+      "label": "Profile Generator Agent",
+      "nodeCategory": "agent"
+    },
+    {
+      "id": "output_node",
+      "type": "Output",
+      "label": "Improved Resume + Profile Text",
+      "nodeCategory": "end"
+    }
+  ],
+  "edges": [
+    { "source": "input_node", "target": "manager_agent" },
+    { "source": "manager_agent", "target": "ats_agent" },
+    { "source": "manager_agent", "target": "content_agent" },
+    { "source": "manager_agent", "target": "profile_agent" },
+    { "source": "ats_agent", "target": "output_node" },
+    { "source": "content_agent", "target": "output_node" },
+    { "source": "profile_agent", "target": "output_node" }
+  ]
+}

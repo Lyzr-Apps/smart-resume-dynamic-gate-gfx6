@@ -1,0 +1,38 @@
+{
+  "agent_name": "Profile Generator Agent",
+  "agent_id": "699968ebe3502b03b1c6e0aa",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "AgentResponse",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "linkedin_headline": {
+            "type": "string",
+            "description": "LinkedIn headline, max 220 characters"
+          },
+          "linkedin_summary": {
+            "type": "string",
+            "description": "LinkedIn summary, 200-300 words"
+          },
+          "job_board_bio": {
+            "type": "string",
+            "description": "Job board profile bio, 100-150 words"
+          },
+          "keywords_targeted": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Keywords targeted across all profile texts"
+          }
+        },
+        "required": ["linkedin_headline", "linkedin_summary", "job_board_bio", "keywords_targeted"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

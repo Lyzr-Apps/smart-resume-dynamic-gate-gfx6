@@ -1,0 +1,53 @@
+{
+  "agent_name": "ATS Optimizer Agent",
+  "agent_id": "699968ea82d9195c9e524b96",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "AgentResponse",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "ats_score": {
+            "type": "number",
+            "description": "ATS readiness score from 0-100"
+          },
+          "score_justification": {
+            "type": "string",
+            "description": "Brief explanation of the ATS score"
+          },
+          "optimized_sections": {
+            "type": "object",
+            "properties": {
+              "contact_info": { "type": "string" },
+              "professional_summary": { "type": "string" },
+              "professional_experience": { "type": "string" },
+              "education": { "type": "string" },
+              "skills": { "type": "string" },
+              "certifications": { "type": "string" },
+              "additional_sections": { "type": "string" }
+            },
+            "required": ["contact_info", "professional_summary", "professional_experience", "education", "skills", "certifications", "additional_sections"],
+            "additionalProperties": false
+          },
+          "keywords_added": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of keywords injected into the resume"
+          },
+          "formatting_fixes": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of formatting changes made"
+          }
+        },
+        "required": ["ats_score", "score_justification", "optimized_sections", "keywords_added", "formatting_fixes"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

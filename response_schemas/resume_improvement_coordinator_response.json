@@ -1,0 +1,54 @@
+{
+  "agent_name": "Resume Improvement Coordinator",
+  "agent_id": "699968ff72a2e3b0eaab98d0",
+  "description": "Coordinates the three sub-agents, distributes the parsed resume text, and aggregates their outputs into a unified improved resume document and profile text package",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "improved_resume": "string",
+    "ats_score": "number",
+    "score_justification": "string",
+    "changes_made": [
+      {
+        "original": "string",
+        "improved": "string",
+        "reason": "string"
+      }
+    ],
+    "keywords_added": [
+      "string"
+    ],
+    "linkedin_headline": "string",
+    "linkedin_summary": "string",
+    "job_board_bio": "string",
+    "improvement_summary": "string"
+  },
+  "example_response": {
+    "improved_resume": "The complete improved resume text combining ATS optimization and content enhancement",
+    "ats_score": 0,
+    "score_justification": "Brief explanation of the ATS score",
+    "changes_made": [
+      {
+        "original": "sample string",
+        "improved": "sample string",
+        "reason": "sample string"
+      }
+    ],
+    "keywords_added": [
+      "sample string"
+    ],
+    "linkedin_headline": "Generated LinkedIn headline",
+    "linkedin_summary": "Generated LinkedIn summary",
+    "job_board_bio": "Generated job board profile bio",
+    "improvement_summary": "Overall summary of all improvements made"
+  },
+  "has_module_outputs": true,
+  "module_outputs_example": {
+    "artifact_files": [
+      {
+        "file_url": "https://example.com/file.pdf"
+      }
+    ]
+  }
+}

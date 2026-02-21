@@ -1,0 +1,59 @@
+{
+  "agents": [
+    {
+      "agent_id": "699968ea82d9195c9e524b96",
+      "name": "ATS Optimizer Agent",
+      "type": "sub-agent",
+      "node_id": "ats_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.3,
+      "top_p": 1,
+      "file_output": false,
+      "has_module_outputs": false
+    },
+    {
+      "agent_id": "699968ea9f3636d6dd80974c",
+      "name": "Content Enhancement Agent",
+      "type": "sub-agent",
+      "node_id": "content_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.5,
+      "top_p": 0.95,
+      "file_output": false,
+      "has_module_outputs": false
+    },
+    {
+      "agent_id": "699968ebe3502b03b1c6e0aa",
+      "name": "Profile Generator Agent",
+      "type": "sub-agent",
+      "node_id": "profile_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.6,
+      "top_p": 0.95,
+      "file_output": false,
+      "has_module_outputs": false
+    },
+    {
+      "agent_id": "699968ff72a2e3b0eaab98d0",
+      "name": "Resume Improvement Coordinator",
+      "type": "manager",
+      "node_id": "manager_agent",
+      "provider": "openai",
+      "model": "gpt-4.1",
+      "temperature": 0.3,
+      "top_p": 1,
+      "file_output": true,
+      "has_module_outputs": true,
+      "managed_agents": [
+        "699968ea82d9195c9e524b96",
+        "699968ea9f3636d6dd80974c",
+        "699968ebe3502b03b1c6e0aa"
+      ]
+    }
+  ],
+  "primary_agent_id": "699968ff72a2e3b0eaab98d0",
+  "workflow_pattern": "manager-subagent"
+}

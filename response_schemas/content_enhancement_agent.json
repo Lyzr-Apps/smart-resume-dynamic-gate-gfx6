@@ -1,0 +1,48 @@
+{
+  "agent_name": "Content Enhancement Agent",
+  "agent_id": "699968ea9f3636d6dd80974c",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "type": "json_schema",
+    "json_schema": {
+      "name": "AgentResponse",
+      "strict": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "enhanced_resume_text": {
+            "type": "string",
+            "description": "The full enhanced resume text with all improvements applied"
+          },
+          "changes_made": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "original": { "type": "string" },
+                "improved": { "type": "string" },
+                "reason": { "type": "string" }
+              },
+              "required": ["original", "improved", "reason"],
+              "additionalProperties": false
+            },
+            "description": "List of specific changes with original text, improved text, and reason"
+          },
+          "action_verbs_used": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of powerful action verbs injected"
+          },
+          "improvement_summary": {
+            "type": "string",
+            "description": "Brief summary of all improvements made"
+          }
+        },
+        "required": ["enhanced_resume_text", "changes_made", "action_verbs_used", "improvement_summary"],
+        "additionalProperties": false
+      }
+    }
+  }
+}
