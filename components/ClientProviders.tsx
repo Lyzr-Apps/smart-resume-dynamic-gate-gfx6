@@ -1,6 +1,23 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, lazy, Suspense } from 'react'
+
+// Lazy load all client-only providers
+const ErrorBoundary = lazy(() => import('@/components/ErrorBoundary'))
+const AgentInterceptorProvider = lazy(() =>
+  import('@/components/AgentInterceptorProvider').then((mod) => ({
+    default: mod.AgentInterceptorProvider,
+  }))
+)
+
+function IframeLoggerLoader() {
+  useEffect(() => {
+    import('@/lib/iframeLogger').then(({ initIframeLogger }) => {
+      initIframeLogger()
+    })
+  }, [])
+  return null
+}
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
@@ -9,41 +26,19 @@ export default function ClientProviders({ children }: { children: React.ReactNod
     setMounted(true)
   }, [])
 
+  // During SSR/prerendering, just render children without any providers
   if (!mounted) {
     return <>{children}</>
   }
 
-  // Dynamically import providers only after mount (client-side only)
-  return <MountedProviders>{children}</MountedProviders>
-}
-
-function MountedProviders({ children }: { children: React.ReactNode }) {
-  const [Provider, setProvider] = useState<{
-    ErrorBoundary: React.ComponentType<{ children: React.ReactNode }>
-    AgentInterceptorProvider: React.ComponentType<{ children: React.ReactNode }>
-  } | null>(null)
-
-  useEffect(() => {
-    Promise.all([
-      import('@/components/ErrorBoundary'),
-      import('@/components/AgentInterceptorProvider'),
-    ]).then(([eb, aip]) => {
-      setProvider({
-        ErrorBoundary: eb.default,
-        AgentInterceptorProvider: aip.AgentInterceptorProvider,
-      })
-    })
-  }, [])
-
-  if (!Provider) {
-    return <>{children}</>
-  }
-
   return (
-    <Provider.ErrorBoundary>
-      <Provider.AgentInterceptorProvider>
-        {children}
-      </Provider.AgentInterceptorProvider>
-    </Provider.ErrorBoundary>
+    <Suspense fallback={<>{children}</>}>
+      <ErrorBoundary>
+        <AgentInterceptorProvider>
+          <IframeLoggerLoader />
+          {children}
+        </AgentInterceptorProvider>
+      </ErrorBoundary>
+    </Suspense>
   )
 }

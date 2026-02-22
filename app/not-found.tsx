@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">

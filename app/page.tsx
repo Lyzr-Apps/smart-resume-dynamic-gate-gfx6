@@ -1,5 +1,7 @@
 import dynamic from 'next/dynamic'
 
+export const dynamic = 'force-dynamic'
+
 const SmartResumeApp = dynamic(() => import('@/components/SmartResumeApp'), {
   ssr: false,
   loading: () => (

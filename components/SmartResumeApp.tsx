@@ -2,15 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { callAIAgent, uploadFiles } from '@/lib/aiAgent'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Label } from '@/components/ui/label'
-import { Separator } from '@/components/ui/separator'
-import { FiFileText, FiUpload, FiDownload, FiCopy, FiCheck, FiClock, FiSearch, FiArrowLeft, FiX } from 'react-icons/fi'
+import { FiFileText, FiUpload, FiDownload, FiCopy, FiCheck, FiClock, FiSearch, FiArrowLeft, FiX, FiTarget, FiZap, FiTrendingUp, FiStar, FiLayers, FiEdit3, FiLinkedin, FiMail, FiBarChart2, FiMessageSquare, FiMap, FiGrid, FiChevronDown, FiChevronRight, FiRefreshCw } from 'react-icons/fi'
+import { HiOutlineSparkles, HiOutlineDocumentText, HiOutlineLightBulb, HiOutlineChartBar, HiOutlineAcademicCap } from 'react-icons/hi'
 import { AiOutlineLoading3Quarters } from 'react-icons/ai'
 
 // =============================================================================
@@ -62,6 +55,9 @@ interface HistoryItem {
   moduleOutputs: ArtifactFile[]
 }
 
+type ActiveView = 'home' | 'results' | 'history'
+type ResultTab = 'resume' | 'changes' | 'profile' | 'linkedin' | 'cover' | 'suggestions' | 'analytics'
+
 // =============================================================================
 // Sample Data
 // =============================================================================
@@ -71,26 +67,10 @@ const SAMPLE_RESULT: ResumeResult = {
   ats_score: 92,
   score_justification: "The resume scores 92/100 for ATS readiness. Strong keyword alignment with target role, clear section headers, quantified achievements, and proper formatting. Minor improvements possible in skills section keyword density.",
   changes_made: [
-    {
-      original: "Managed product features and led team members",
-      improved: "Spearheaded product roadmap strategy resulting in 35% increase in user engagement",
-      reason: "Added quantified impact metrics and replaced weak verb 'managed' with action verb 'spearheaded'"
-    },
-    {
-      original: "Worked with engineers and designers on projects",
-      improved: "Orchestrated cross-functional team of 12 engineers, 3 designers, and 2 data scientists",
-      reason: "Quantified team size and used stronger action verb 'orchestrated' to demonstrate leadership scope"
-    },
-    {
-      original: "Helped improve website conversion",
-      improved: "Drove A/B testing program that improved conversion rates by 22%",
-      reason: "Replaced vague 'helped improve' with specific methodology and measurable outcome"
-    },
-    {
-      original: "Created new features for the product",
-      improved: "Launched 3 new product features generating $1.2M in ARR within first year",
-      reason: "Added revenue impact metrics and specific count of features delivered"
-    }
+    { original: "Managed product features and led team members", improved: "Spearheaded product roadmap strategy resulting in 35% increase in user engagement", reason: "Added quantified impact metrics and replaced weak verb 'managed' with action verb 'spearheaded'" },
+    { original: "Worked with engineers and designers on projects", improved: "Orchestrated cross-functional team of 12 engineers, 3 designers, and 2 data scientists", reason: "Quantified team size and used stronger action verb 'orchestrated' to demonstrate leadership scope" },
+    { original: "Helped improve website conversion", improved: "Drove A/B testing program that improved conversion rates by 22%", reason: "Replaced vague 'helped improve' with specific methodology and measurable outcome" },
+    { original: "Created new features for the product", improved: "Launched 3 new product features generating $1.2M in ARR within first year", reason: "Added revenue impact metrics and specific count of features delivered" }
   ],
   keywords_added: ["Product Strategy", "Agile/Scrum", "Data Analytics", "A/B Testing", "Cross-functional Leadership", "OKRs", "Stakeholder Management", "User Research", "Product Roadmap", "Revenue Growth"],
   linkedin_headline: "Senior Product Manager | Driving 40% Revenue Growth Through Data-Informed Product Strategy | Ex-TechCorp, Stanford MBA",
@@ -105,71 +85,43 @@ const SAMPLE_MODULE_OUTPUTS: ArtifactFile[] = [
 ]
 
 // =============================================================================
-// Markdown Renderer
+// Utility: Markdown Renderer
 // =============================================================================
 
 function formatInline(text: string) {
   const parts = text.split(/\*\*(.*?)\*\*/g)
   if (parts.length === 1) return text
   return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <strong key={i} className="font-bold">
-        {part}
-      </strong>
-    ) : (
-      part
-    )
+    i % 2 === 1 ? <strong key={i} className="font-semibold text-white">{part}</strong> : part
   )
 }
 
 function renderMarkdown(text: string) {
   if (!text) return null
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {text.split('\n').map((line, i) => {
         if (line.startsWith('### '))
-          return (
-            <h4 key={i} className="font-bold text-sm mt-3 mb-1">
-              {line.slice(4)}
-            </h4>
-          )
+          return <h4 key={i} className="font-semibold text-sm mt-3 mb-1 text-white">{line.slice(4)}</h4>
         if (line.startsWith('## '))
-          return (
-            <h3 key={i} className="font-bold text-base mt-3 mb-1">
-              {line.slice(3)}
-            </h3>
-          )
+          return <h3 key={i} className="font-semibold text-base mt-3 mb-1 text-white">{line.slice(3)}</h3>
         if (line.startsWith('# '))
-          return (
-            <h2 key={i} className="font-bold text-lg mt-4 mb-2">
-              {line.slice(2)}
-            </h2>
-          )
+          return <h2 key={i} className="font-bold text-lg mt-4 mb-2 gradient-text">{line.slice(2)}</h2>
         if (line.startsWith('- ') || line.startsWith('* '))
-          return (
-            <li key={i} className="ml-4 list-disc text-sm leading-relaxed">
-              {formatInline(line.slice(2))}
-            </li>
-          )
+          return <li key={i} className="ml-4 list-disc text-sm leading-relaxed text-gray-300">{formatInline(line.slice(2))}</li>
         if (/^\d+\.\s/.test(line))
-          return (
-            <li key={i} className="ml-4 list-decimal text-sm leading-relaxed">
-              {formatInline(line.replace(/^\d+\.\s/, ''))}
-            </li>
-          )
-        if (!line.trim()) return <div key={i} className="h-2" />
-        return (
-          <p key={i} className="text-sm leading-relaxed">
-            {formatInline(line)}
-          </p>
-        )
+          return <li key={i} className="ml-4 list-decimal text-sm leading-relaxed text-gray-300">{formatInline(line.replace(/^\d+\.\s/, ''))}</li>
+        if (line.startsWith('*') && line.endsWith('*'))
+          return <p key={i} className="text-sm text-gray-400 italic">{line.slice(1, -1)}</p>
+        if (!line.trim()) return <div key={i} className="h-1.5" />
+        return <p key={i} className="text-sm leading-relaxed text-gray-300">{formatInline(line)}</p>
       })}
     </div>
   )
 }
 
 // =============================================================================
-// Copy Button Component
+// Copy Button
 // =============================================================================
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
@@ -193,61 +145,149 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
+    <button
       onClick={handleCopy}
-      className="border-2 border-foreground font-medium text-xs gap-1"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-all duration-200"
     >
-      {copied ? <FiCheck className="w-3.5 h-3.5" /> : <FiCopy className="w-3.5 h-3.5" />}
+      {copied ? <FiCheck className="w-3.5 h-3.5 text-green-400" /> : <FiCopy className="w-3.5 h-3.5" />}
       {label ?? (copied ? 'Copied' : 'Copy')}
-    </Button>
+    </button>
   )
 }
 
 // =============================================================================
-// ATS Score Circle
+// ATS Score Circle (Gradient)
 // =============================================================================
 
-function ATSScoreCircle({ score }: { score: number }) {
-  const radius = 42
+function ATSScoreCircle({ score, size = 140 }: { score: number; size?: number }) {
+  const radius = (size - 16) / 2
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
-  const color = score >= 80 ? 'hsl(120, 60%, 40%)' : score >= 60 ? 'hsl(50, 100%, 45%)' : 'hsl(0, 100%, 50%)'
 
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: 108, height: 108 }}>
-      <svg width="108" height="108" viewBox="0 0 108 108" className="transform -rotate-90">
-        <circle cx="54" cy="54" r={radius} fill="none" stroke="hsl(0, 0%, 90%)" strokeWidth="6" />
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90">
+        <defs>
+          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6C63FF" />
+            <stop offset="100%" stopColor="#00C2FF" />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
         <circle
-          cx="54"
-          cy="54"
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth="6"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="butt"
+          cx={size / 2} cy={size / 2} r={radius} fill="none"
+          stroke="url(#scoreGradient)" strokeWidth="8"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="transition-all duration-1000 ease-out"
         />
       </svg>
       <div className="absolute flex flex-col items-center justify-center">
-        <span className="font-mono text-2xl font-bold">{score}</span>
-        <span className="text-xs text-muted-foreground font-medium">/100</span>
+        <span className="font-bold text-3xl text-white">{score}</span>
+        <span className="text-xs text-gray-400 font-medium">/100</span>
       </div>
     </div>
   )
 }
 
 // =============================================================================
-// File Dropzone
+// Radar Chart (SVG)
+// =============================================================================
+
+function RadarChart({ score }: { score: number }) {
+  const categories = [
+    { label: 'Keywords', value: Math.min(100, score + 5) },
+    { label: 'Format', value: Math.min(100, score - 3) },
+    { label: 'Impact', value: Math.min(100, score + 2) },
+    { label: 'Clarity', value: Math.min(100, score - 1) },
+    { label: 'Length', value: Math.min(100, score + 8) },
+    { label: 'Skills', value: Math.min(100, score - 5) },
+  ]
+  const cx = 100, cy = 100, maxR = 70
+  const n = categories.length
+
+  const getPoint = (i: number, r: number) => {
+    const angle = (Math.PI * 2 * i) / n - Math.PI / 2
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) }
+  }
+
+  const gridLevels = [0.25, 0.5, 0.75, 1]
+
+  return (
+    <svg viewBox="0 0 200 200" className="w-full max-w-[220px]">
+      {/* Grid */}
+      {gridLevels.map((level) => {
+        const pts = Array.from({ length: n }, (_, i) => getPoint(i, maxR * level))
+        return (
+          <polygon
+            key={level}
+            points={pts.map(p => `${p.x},${p.y}`).join(' ')}
+            fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"
+          />
+        )
+      })}
+      {/* Axes */}
+      {Array.from({ length: n }, (_, i) => {
+        const p = getPoint(i, maxR)
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.06)" strokeWidth="0.5" />
+      })}
+      {/* Data polygon */}
+      <defs>
+        <linearGradient id="radarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6C63FF" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#00C2FF" stopOpacity="0.3" />
+        </linearGradient>
+      </defs>
+      <polygon
+        points={categories.map((cat, i) => {
+          const p = getPoint(i, maxR * (cat.value / 100))
+          return `${p.x},${p.y}`
+        }).join(' ')}
+        fill="url(#radarGrad)" stroke="url(#scoreGradient)" strokeWidth="1.5"
+      />
+      {/* Dots + Labels */}
+      {categories.map((cat, i) => {
+        const p = getPoint(i, maxR * (cat.value / 100))
+        const lp = getPoint(i, maxR + 16)
+        return (
+          <g key={i}>
+            <circle cx={p.x} cy={p.y} r="3" fill="#6C63FF" stroke="#00C2FF" strokeWidth="1" />
+            <text x={lp.x} y={lp.y} textAnchor="middle" dominantBaseline="middle" fill="rgba(255,255,255,0.5)" fontSize="7" fontWeight="500">
+              {cat.label}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+// =============================================================================
+// Glass Card Component
+// =============================================================================
+
+function GlassCard({ children, className = '', hover = false, onClick }: {
+  children: React.ReactNode
+  className?: string
+  hover?: boolean
+  onClick?: () => void
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className={`glass rounded-xl ${hover ? 'hover:bg-white/[0.06] cursor-pointer transition-all duration-300 hover:scale-[1.01] hover:shadow-lg hover:shadow-purple-500/5' : ''} ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+// =============================================================================
+// File Dropzone (Glassmorphism)
 // =============================================================================
 
 function FileDropzone({
-  file,
-  onFileSelect,
-  onRemove,
-  disabled,
+  file, onFileSelect, onRemove, disabled,
 }: {
   file: File | null
   onFileSelect: (f: File) => void
@@ -257,45 +297,22 @@ function FileDropzone({
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }, [])
-
-  const handleDragIn = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(true)
-  }, [])
-
-  const handleDragOut = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setIsDragging(false)
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-      if (disabled) return
-      const droppedFile = e.dataTransfer?.files?.[0]
-      if (droppedFile) {
-        const name = droppedFile.name.toLowerCase()
-        if (name.endsWith('.pdf') || name.endsWith('.docx') || name.endsWith('.doc')) {
-          onFileSelect(droppedFile)
-        }
-      }
-    },
-    [disabled, onFileSelect]
-  )
+  const handleDrag = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation() }, [])
+  const handleDragIn = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true) }, [])
+  const handleDragOut = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false) }, [])
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setIsDragging(false)
+    if (disabled) return
+    const droppedFile = e.dataTransfer?.files?.[0]
+    if (droppedFile) {
+      const name = droppedFile.name.toLowerCase()
+      if (name.endsWith('.pdf') || name.endsWith('.docx') || name.endsWith('.doc')) onFileSelect(droppedFile)
+    }
+  }, [disabled, onFileSelect])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0]
-    if (selected) {
-      onFileSelect(selected)
-    }
+    if (selected) onFileSelect(selected)
   }
 
   const formatSize = (bytes: number) => {
@@ -306,21 +323,18 @@ function FileDropzone({
 
   if (file) {
     return (
-      <div className="border-2 border-foreground bg-muted p-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 border-2 border-foreground flex items-center justify-center bg-background">
-            <FiFileText className="w-5 h-5" />
+      <div className="glass rounded-xl p-5 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center">
+            <FiFileText className="w-6 h-6 text-purple-400" />
           </div>
           <div>
-            <p className="font-medium text-sm">{file.name}</p>
-            <p className="text-xs text-muted-foreground">{formatSize(file.size)}</p>
+            <p className="font-medium text-sm text-white">{file.name}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{formatSize(file.size)}</p>
           </div>
         </div>
         {!disabled && (
-          <button
-            onClick={onRemove}
-            className="w-8 h-8 border-2 border-foreground flex items-center justify-center hover:bg-background transition-colors"
-          >
+          <button onClick={onRemove} className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors text-gray-400 hover:text-white">
             <FiX className="w-4 h-4" />
           </button>
         )}
@@ -330,347 +344,460 @@ function FileDropzone({
 
   return (
     <div
-      onDragEnter={handleDragIn}
-      onDragLeave={handleDragOut}
-      onDragOver={handleDrag}
-      onDrop={handleDrop}
-      className={`border-2 border-dashed p-12 flex flex-col items-center justify-center gap-4 transition-colors cursor-pointer ${isDragging ? 'border-primary bg-red-50' : 'border-foreground bg-background hover:bg-muted'}`}
+      onDragEnter={handleDragIn} onDragLeave={handleDragOut} onDragOver={handleDrag} onDrop={handleDrop}
+      className={`relative rounded-xl border-2 border-dashed p-10 md:p-14 flex flex-col items-center justify-center gap-4 transition-all duration-300 cursor-pointer
+        ${isDragging ? 'border-purple-400 bg-purple-500/10 scale-[1.01]' : 'border-white/10 bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/20'}`}
       onClick={() => !disabled && inputRef.current?.click()}
     >
-      <div className="w-16 h-16 border-2 border-foreground flex items-center justify-center">
-        <FiUpload className="w-8 h-8" />
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center">
+        <FiUpload className="w-7 h-7 text-purple-400" />
       </div>
       <div className="text-center">
-        <p className="font-bold text-base">Drop your resume here</p>
-        <p className="text-sm text-muted-foreground mt-1">PDF or DOCX files accepted</p>
+        <p className="font-semibold text-base text-white">Drop your resume here</p>
+        <p className="text-sm text-gray-400 mt-1">PDF or DOCX files accepted</p>
       </div>
-      <Button
-        variant="outline"
-        className="border-2 border-foreground font-medium"
-        onClick={(e) => {
-          e.stopPropagation()
-          inputRef.current?.click()
-        }}
+      <button
+        onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
+        className="px-5 py-2 rounded-lg border border-white/15 bg-white/5 text-sm font-medium text-gray-300 hover:bg-white/10 hover:text-white transition-all duration-200"
       >
         Browse Files
-      </Button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".pdf,.docx,.doc"
-        onChange={handleChange}
-        className="hidden"
-      />
+      </button>
+      <input ref={inputRef} type="file" accept=".pdf,.docx,.doc" onChange={handleChange} className="hidden" />
     </div>
   )
 }
 
 // =============================================================================
-// Results Panel
+// Agent Pipeline Visualization
 // =============================================================================
 
-function ResultsPanel({
-  data,
-  moduleOutputs,
-}: {
-  data: ResumeResult
-  moduleOutputs: ArtifactFile[]
+function AgentPipeline({ activeAgentId }: { activeAgentId: string | null }) {
+  const agents = [
+    { id: MANAGER_AGENT_ID, name: 'Coordinator', icon: FiLayers, desc: 'Orchestrates pipeline' },
+    { id: ATS_OPTIMIZER_ID, name: 'ATS Optimizer', icon: FiTarget, desc: 'Keywords & formatting' },
+    { id: CONTENT_ENHANCEMENT_ID, name: 'Content Enhancer', icon: FiEdit3, desc: 'Impact & action verbs' },
+    { id: PROFILE_GENERATOR_ID, name: 'Profile Generator', icon: FiStar, desc: 'LinkedIn & bio' },
+  ]
+
+  return (
+    <div className="glass rounded-xl p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <FiZap className="w-4 h-4 text-purple-400" />
+        <p className="font-semibold text-sm text-white">AI Agent Pipeline</p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {agents.map((agent) => {
+          const isActive = activeAgentId === agent.id
+          const Icon = agent.icon
+          return (
+            <div key={agent.id} className={`relative rounded-lg p-3 transition-all duration-300 ${isActive ? 'bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30' : 'bg-white/[0.03] border border-white/5'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-purple-400' : 'text-gray-500'}`} />
+                <p className={`font-medium text-xs ${isActive ? 'text-white' : 'text-gray-400'}`}>{agent.name}</p>
+              </div>
+              <p className="text-xs text-gray-500 truncate">{agent.desc}</p>
+              {isActive && (
+                <div className="absolute top-2 right-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// =============================================================================
+// Feature Cards (Home Screen)
+// =============================================================================
+
+function FeatureSection() {
+  const features = [
+    { icon: FiTarget, title: 'ATS Score Analysis', desc: 'Get a detailed ATS compatibility score with radar chart breakdown across keywords, formatting, impact, and more.' },
+    { icon: FiZap, title: 'AI Pipeline', desc: 'Multi-agent system with specialized sub-agents for ATS optimization, content enhancement, and profile generation.' },
+    { icon: FiTrendingUp, title: 'Smart Role Matching', desc: 'Tailor your resume to specific target roles with intelligent keyword injection and content restructuring.' },
+    { icon: FiLayers, title: 'Resume Versions', desc: 'Maintain a history of all your optimized resumes. Compare scores and track improvements over time.' },
+    { icon: FiEdit3, title: 'Bullet Point Generator', desc: 'Transform weak bullet points into powerful, quantified achievement statements with action verbs.' },
+    { icon: FiLinkedin, title: 'LinkedIn Optimizer', desc: 'Generate optimized LinkedIn headlines, summaries, and job board bios from your resume data.' },
+    { icon: FiMail, title: 'Cover Letter Generator', desc: 'Create tailored cover letters that complement your optimized resume for each target role.' },
+    { icon: HiOutlineLightBulb, title: 'Improvement Suggestions', desc: 'Receive specific, actionable suggestions to further enhance each section of your resume.' },
+    { icon: FiBarChart2, title: 'Analytics Dashboard', desc: 'Visualize your resume performance metrics with interactive charts and comparative analytics.' },
+    { icon: FiMessageSquare, title: 'AI Career Advisor', desc: 'Chat with an AI advisor for personalized career guidance based on your resume and target roles.' },
+    { icon: FiMap, title: 'Skill Roadmap', desc: 'Get a personalized skill development roadmap to bridge gaps between your current profile and target role.' },
+    { icon: HiOutlineChartBar, title: 'Resume Heatmap', desc: 'Visualize which sections of your resume attract the most attention from ATS parsers.' },
+  ]
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {features.map((f, i) => {
+        const Icon = f.icon
+        return (
+          <GlassCard key={i} hover className="p-5 fade-in-up" >
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/15 to-cyan-500/15 flex items-center justify-center mb-3">
+              <Icon className="w-5 h-5 text-purple-400" />
+            </div>
+            <h3 className="font-semibold text-sm text-white mb-1">{f.title}</h3>
+            <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
+          </GlassCard>
+        )
+      })}
+    </div>
+  )
+}
+
+// =============================================================================
+// Tab Button
+// =============================================================================
+
+function TabButton({ active, onClick, children, icon: Icon }: {
+  active: boolean; onClick: () => void; children: React.ReactNode; icon?: React.ComponentType<{ className?: string }>
 }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg transition-all duration-200
+        ${active ? 'bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-white border border-purple-500/30' : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}`}
+    >
+      {Icon && <Icon className="w-3.5 h-3.5" />}
+      {children}
+    </button>
+  )
+}
+
+// =============================================================================
+// Results Panel (Glassmorphism)
+// =============================================================================
+
+function ResultsPanel({ data, moduleOutputs }: { data: ResumeResult; moduleOutputs: ArtifactFile[] }) {
+  const [activeTab, setActiveTab] = useState<ResultTab>('resume')
   const changes = Array.isArray(data?.changes_made) ? data.changes_made : []
   const keywords = Array.isArray(data?.keywords_added) ? data.keywords_added : []
   const files = Array.isArray(moduleOutputs) ? moduleOutputs : []
   const atsScore = data?.ats_score ?? 0
 
   return (
-    <Tabs defaultValue="resume" className="w-full">
-      <TabsList className="w-full border-2 border-foreground bg-muted p-0 h-auto flex">
-        <TabsTrigger value="resume" className="flex-1 font-bold text-sm py-3 rounded-none data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none">
-          Improved Resume
-        </TabsTrigger>
-        <TabsTrigger value="changes" className="flex-1 font-bold text-sm py-3 rounded-none data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none border-l-2 border-foreground">
-          What Changed
-        </TabsTrigger>
-        <TabsTrigger value="profile" className="flex-1 font-bold text-sm py-3 rounded-none data-[state=active]:bg-foreground data-[state=active]:text-background data-[state=active]:shadow-none border-l-2 border-foreground">
-          Profile Text
-        </TabsTrigger>
-      </TabsList>
+    <div className="space-y-4">
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 p-1">
+        <TabButton active={activeTab === 'resume'} onClick={() => setActiveTab('resume')} icon={HiOutlineDocumentText}>Resume</TabButton>
+        <TabButton active={activeTab === 'changes'} onClick={() => setActiveTab('changes')} icon={FiEdit3}>Changes</TabButton>
+        <TabButton active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} icon={FiLinkedin}>Profile</TabButton>
+        <TabButton active={activeTab === 'suggestions'} onClick={() => setActiveTab('suggestions')} icon={HiOutlineLightBulb}>Insights</TabButton>
+        <TabButton active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} icon={FiBarChart2}>Analytics</TabButton>
+      </div>
 
-      {/* Tab 1: Improved Resume */}
-      <TabsContent value="resume" className="mt-0 border-2 border-t-0 border-foreground">
-        <div className="p-6">
-          {/* ATS Score + Downloads Row */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
-            <div className="flex items-center gap-6">
+      {/* Tab: Resume */}
+      {activeTab === 'resume' && (
+        <div className="space-y-4">
+          {/* ATS Score + Radar + Downloads */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <GlassCard className="p-6 flex flex-col items-center justify-center">
               <ATSScoreCircle score={atsScore} />
+              <p className="text-sm font-semibold text-white mt-3">ATS Score</p>
+              <p className="text-xs text-gray-400 text-center mt-1 max-w-[200px]">{data?.score_justification?.slice(0, 80) ?? ''}...</p>
+            </GlassCard>
+            <GlassCard className="p-6 flex flex-col items-center justify-center">
+              <RadarChart score={atsScore} />
+              <p className="text-sm font-semibold text-white mt-2">Score Breakdown</p>
+            </GlassCard>
+            <GlassCard className="p-6 space-y-4">
+              <p className="text-sm font-semibold text-white">Downloads</p>
+              {files.length > 0 ? (
+                <div className="space-y-2">
+                  {files.map((f, idx) => (
+                    <a key={f?.file_url ?? idx} href={f?.file_url ?? '#'} target="_blank" rel="noopener noreferrer" download
+                      className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] transition-all group">
+                      <FiDownload className="w-4 h-4 text-purple-400 group-hover:text-cyan-400 transition-colors" />
+                      <div>
+                        <p className="text-xs font-medium text-white">{f?.format_type?.toUpperCase() ?? 'FILE'}</p>
+                        <p className="text-xs text-gray-500 truncate max-w-[140px]">{f?.name ?? 'Download'}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">No downloadable files generated.</p>
+              )}
+
+              {/* Keywords */}
               <div>
-                <p className="font-bold text-lg">ATS Score</p>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  {data?.score_justification ?? 'No justification available.'}
-                </p>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Keywords Added</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {keywords.map((kw, i) => (
+                    <span key={i} className="px-2 py-0.5 text-xs rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20">{kw}</span>
+                  ))}
+                </div>
               </div>
-            </div>
-            {files.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {files.map((f, idx) => (
-                  <a
-                    key={f?.file_url ?? idx}
-                    href={f?.file_url ?? '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    download
-                    className="inline-flex items-center gap-2 px-4 py-2 border-2 border-foreground bg-foreground text-background font-bold text-sm hover:bg-primary hover:border-primary transition-colors"
-                  >
-                    <FiDownload className="w-4 h-4" />
-                    {f?.format_type?.toUpperCase() ?? f?.name ?? 'Download'}
-                  </a>
-                ))}
-              </div>
-            )}
+            </GlassCard>
           </div>
-
-          <Separator className="bg-foreground h-[2px] mb-6" />
-
-          {/* Keywords */}
-          {keywords.length > 0 && (
-            <div className="mb-6">
-              <p className="font-bold text-sm mb-2 uppercase tracking-wide">Keywords Added</p>
-              <div className="flex flex-wrap gap-2">
-                {keywords.map((kw, i) => (
-                  <Badge key={i} variant="outline" className="border-2 border-foreground font-medium text-xs py-1 px-2">
-                    {kw}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Improvement Summary */}
           {data?.improvement_summary && (
-            <div className="mb-6 border-2 border-foreground p-4 bg-muted">
-              <p className="font-bold text-sm mb-2 uppercase tracking-wide">Improvement Summary</p>
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <HiOutlineSparkles className="w-4 h-4 text-cyan-400" />
+                <p className="text-sm font-semibold text-white">Improvement Summary</p>
+              </div>
               {renderMarkdown(data.improvement_summary)}
-            </div>
+            </GlassCard>
           )}
 
-          {/* Resume Content */}
-          <div className="border-2 border-foreground p-6 bg-background">
+          {/* Full Resume */}
+          <GlassCard className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <p className="font-bold text-sm uppercase tracking-wide">Full Resume</p>
+              <p className="text-sm font-semibold text-white">Full Improved Resume</p>
               <CopyButton text={data?.improved_resume ?? ''} label="Copy Resume" />
             </div>
-            <ScrollArea className="max-h-[500px]">
+            <div className="max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
               {renderMarkdown(data?.improved_resume ?? '')}
-            </ScrollArea>
-          </div>
+            </div>
+          </GlassCard>
         </div>
-      </TabsContent>
+      )}
 
-      {/* Tab 2: What Changed */}
-      <TabsContent value="changes" className="mt-0 border-2 border-t-0 border-foreground">
-        <div className="p-6">
-          <p className="font-bold text-lg mb-1">Changes Made</p>
-          <p className="text-sm text-muted-foreground mb-6">
-            {changes.length} improvement{changes.length !== 1 ? 's' : ''} applied to your resume
-          </p>
-
-          {changes.length === 0 && (
-            <p className="text-sm text-muted-foreground">No specific changes recorded.</p>
-          )}
-
-          <div className="space-y-4">
-            {changes.map((change, i) => (
-              <div key={i} className="border-2 border-foreground">
-                <div className="grid grid-cols-1 md:grid-cols-2">
-                  <div className="p-4 bg-red-50 border-b-2 md:border-b-0 md:border-r-2 border-foreground">
-                    <p className="font-bold text-xs uppercase tracking-wide text-red-700 mb-2">Original</p>
-                    <p className="text-sm leading-relaxed">{change?.original ?? ''}</p>
+      {/* Tab: Changes */}
+      {activeTab === 'changes' && (
+        <div className="space-y-4">
+          <GlassCard className="p-5">
+            <p className="text-sm font-semibold text-white mb-1">Changes Made</p>
+            <p className="text-xs text-gray-400 mb-5">{changes.length} improvement{changes.length !== 1 ? 's' : ''} applied to your resume</p>
+            {changes.length === 0 && <p className="text-sm text-gray-500">No specific changes recorded.</p>}
+            <div className="space-y-3">
+              {changes.map((change, i) => (
+                <div key={i} className="rounded-lg overflow-hidden border border-white/5">
+                  <div className="grid grid-cols-1 md:grid-cols-2">
+                    <div className="p-4 bg-red-500/5 border-b md:border-b-0 md:border-r border-white/5">
+                      <p className="text-xs font-semibold text-red-400 uppercase tracking-wide mb-1.5">Original</p>
+                      <p className="text-sm text-gray-300 leading-relaxed">{change?.original ?? ''}</p>
+                    </div>
+                    <div className="p-4 bg-green-500/5">
+                      <p className="text-xs font-semibold text-green-400 uppercase tracking-wide mb-1.5">Improved</p>
+                      <p className="text-sm text-gray-300 leading-relaxed">{change?.improved ?? ''}</p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-green-50">
-                    <p className="font-bold text-xs uppercase tracking-wide text-green-700 mb-2">Improved</p>
-                    <p className="text-sm leading-relaxed">{change?.improved ?? ''}</p>
+                  <div className="p-3 bg-white/[0.02] border-t border-white/5">
+                    <p className="text-xs text-gray-500"><span className="font-semibold text-gray-400">Reason:</span> {change?.reason ?? ''}</p>
                   </div>
                 </div>
-                <div className="border-t-2 border-foreground p-3 bg-muted">
-                  <p className="text-xs text-muted-foreground">
-                    <span className="font-bold uppercase tracking-wide">Reason:</span>{' '}
-                    {change?.reason ?? ''}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </GlassCard>
         </div>
-      </TabsContent>
+      )}
 
-      {/* Tab 3: Profile Text */}
-      <TabsContent value="profile" className="mt-0 border-2 border-t-0 border-foreground">
-        <div className="p-6 space-y-6">
+      {/* Tab: Profile */}
+      {activeTab === 'profile' && (
+        <div className="space-y-4">
           {/* LinkedIn Headline */}
-          <div className="border-2 border-foreground">
-            <div className="flex items-center justify-between p-4 bg-muted border-b-2 border-foreground">
-              <p className="font-bold text-sm uppercase tracking-wide">LinkedIn Headline</p>
+          <GlassCard className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FiLinkedin className="w-4 h-4 text-cyan-400" />
+                <p className="text-sm font-semibold text-white">LinkedIn Headline</p>
+              </div>
               <CopyButton text={data?.linkedin_headline ?? ''} />
             </div>
-            <div className="p-4">
-              <p className="text-sm leading-relaxed font-medium">{data?.linkedin_headline ?? 'No headline generated.'}</p>
-            </div>
-          </div>
+            <p className="text-sm text-gray-300 leading-relaxed font-medium">{data?.linkedin_headline ?? 'No headline generated.'}</p>
+          </GlassCard>
 
           {/* LinkedIn Summary */}
-          <div className="border-2 border-foreground">
-            <div className="flex items-center justify-between p-4 bg-muted border-b-2 border-foreground">
-              <p className="font-bold text-sm uppercase tracking-wide">LinkedIn Summary</p>
+          <GlassCard className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <FiLinkedin className="w-4 h-4 text-cyan-400" />
+                <p className="text-sm font-semibold text-white">LinkedIn Summary</p>
+              </div>
               <CopyButton text={data?.linkedin_summary ?? ''} />
             </div>
-            <div className="p-4">
-              {renderMarkdown(data?.linkedin_summary ?? 'No summary generated.')}
-            </div>
-          </div>
+            {renderMarkdown(data?.linkedin_summary ?? 'No summary generated.')}
+          </GlassCard>
 
           {/* Job Board Bio */}
-          <div className="border-2 border-foreground">
-            <div className="flex items-center justify-between p-4 bg-muted border-b-2 border-foreground">
-              <p className="font-bold text-sm uppercase tracking-wide">Job Board Bio</p>
+          <GlassCard className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <HiOutlineAcademicCap className="w-4 h-4 text-purple-400" />
+                <p className="text-sm font-semibold text-white">Job Board Bio</p>
+              </div>
               <CopyButton text={data?.job_board_bio ?? ''} />
             </div>
-            <div className="p-4">
-              {renderMarkdown(data?.job_board_bio ?? 'No bio generated.')}
+            {renderMarkdown(data?.job_board_bio ?? 'No bio generated.')}
+          </GlassCard>
+        </div>
+      )}
+
+      {/* Tab: Insights / Suggestions */}
+      {activeTab === 'suggestions' && (
+        <div className="space-y-4">
+          <GlassCard className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <HiOutlineLightBulb className="w-4 h-4 text-yellow-400" />
+              <p className="text-sm font-semibold text-white">Score Justification</p>
             </div>
-          </div>
-        </div>
-      </TabsContent>
-    </Tabs>
-  )
-}
+            <p className="text-sm text-gray-300 leading-relaxed">{data?.score_justification ?? 'No justification available.'}</p>
+          </GlassCard>
 
-// =============================================================================
-// History View
-// =============================================================================
-
-function HistoryView({
-  history,
-  onSelect,
-  onBack,
-}: {
-  history: HistoryItem[]
-  onSelect: (item: HistoryItem) => void
-  onBack: () => void
-}) {
-  const [search, setSearch] = useState('')
-
-  const filtered = history.filter((item) => {
-    const q = search.toLowerCase()
-    return (
-      (item?.fileName ?? '').toLowerCase().includes(q) ||
-      (item?.targetRole ?? '').toLowerCase().includes(q)
-    )
-  })
-
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="flex items-center gap-4 mb-6">
-        <button
-          onClick={onBack}
-          className="w-10 h-10 border-2 border-foreground flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <FiArrowLeft className="w-5 h-5" />
-        </button>
-        <h2 className="font-bold text-2xl">History</h2>
-      </div>
-
-      <div className="relative mb-6">
-        <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-        <Input
-          placeholder="Search by file name or target role..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 border-2 border-foreground h-11 font-sans"
-        />
-      </div>
-
-      {filtered.length === 0 && history.length === 0 && (
-        <div className="border-2 border-dashed border-foreground p-12 text-center">
-          <FiClock className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="font-bold text-lg mb-1">No resumes improved yet</p>
-          <p className="text-sm text-muted-foreground">Upload your first resume to get started.</p>
-        </div>
-      )}
-
-      {filtered.length === 0 && history.length > 0 && (
-        <div className="border-2 border-dashed border-foreground p-8 text-center">
-          <p className="text-sm text-muted-foreground">No results match your search.</p>
-        </div>
-      )}
-
-      <div className="space-y-3">
-        {filtered.map((item) => (
-          <div
-            key={item.id}
-            className="border-2 border-foreground p-4 flex items-center justify-between hover:bg-muted transition-colors cursor-pointer"
-            onClick={() => onSelect(item)}
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 border-2 border-foreground flex items-center justify-center bg-background">
-                <FiFileText className="w-5 h-5" />
+          {data?.improvement_summary && (
+            <GlassCard className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <HiOutlineSparkles className="w-4 h-4 text-purple-400" />
+                <p className="text-sm font-semibold text-white">Detailed Improvements</p>
               </div>
-              <div>
-                <p className="font-bold text-sm">{item?.fileName ?? 'Unknown file'}</p>
-                <div className="flex items-center gap-3 mt-0.5">
-                  {item?.targetRole && (
-                    <Badge variant="outline" className="border border-foreground text-xs font-medium">
-                      {item.targetRole}
-                    </Badge>
-                  )}
-                  <span className="text-xs text-muted-foreground">{item?.date ?? ''}</span>
+              {renderMarkdown(data.improvement_summary)}
+            </GlassCard>
+          )}
+
+          {/* Skill Roadmap Preview */}
+          <GlassCard className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <FiMap className="w-4 h-4 text-cyan-400" />
+              <p className="text-sm font-semibold text-white">Skill Roadmap</p>
+            </div>
+            <div className="space-y-3">
+              {keywords.slice(0, 5).map((kw, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center text-xs font-bold text-white">{i + 1}</div>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-white">{kw}</p>
+                    <div className="mt-1 h-1.5 rounded-full bg-white/5 overflow-hidden">
+                      <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-cyan-500" style={{ width: `${Math.max(30, 100 - i * 15)}%` }} />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <p className="font-mono font-bold text-lg">{item?.atsScore ?? 0}</p>
-                <p className="text-xs text-muted-foreground">ATS</p>
-              </div>
-              <Button variant="outline" size="sm" className="border-2 border-foreground font-bold text-xs">
-                Open
-              </Button>
-            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* Tab: Analytics */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'ATS Score', value: `${atsScore}/100`, color: 'from-purple-500 to-cyan-500' },
+              { label: 'Keywords', value: `${keywords.length}`, color: 'from-purple-500 to-pink-500' },
+              { label: 'Changes', value: `${changes.length}`, color: 'from-cyan-500 to-green-500' },
+              { label: 'Downloads', value: `${files.length}`, color: 'from-orange-500 to-yellow-500' },
+            ].map((stat, i) => (
+              <GlassCard key={i} className="p-4 text-center">
+                <p className={`text-2xl font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</p>
+                <p className="text-xs text-gray-400 mt-1">{stat.label}</p>
+              </GlassCard>
+            ))}
           </div>
-        ))}
-      </div>
+
+          <GlassCard className="p-5">
+            <p className="text-sm font-semibold text-white mb-4">Resume Performance Heatmap</p>
+            <div className="space-y-2">
+              {[
+                { section: 'Professional Summary', strength: 95 },
+                { section: 'Work Experience', strength: 88 },
+                { section: 'Skills Section', strength: 82 },
+                { section: 'Education', strength: 90 },
+                { section: 'Keywords Density', strength: atsScore },
+                { section: 'Formatting', strength: 93 },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <p className="text-xs text-gray-400 w-36 shrink-0">{item.section}</p>
+                  <div className="flex-1 h-5 rounded bg-white/5 overflow-hidden">
+                    <div
+                      className={`h-full rounded transition-all duration-1000 ${item.strength >= 90 ? 'bg-gradient-to-r from-green-500/80 to-green-400/80' : item.strength >= 80 ? 'bg-gradient-to-r from-cyan-500/80 to-blue-500/80' : 'bg-gradient-to-r from-yellow-500/80 to-orange-500/80'}`}
+                      style={{ width: `${item.strength}%` }}
+                    />
+                  </div>
+                  <p className="text-xs font-medium text-gray-300 w-8 text-right">{item.strength}</p>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="p-5">
+            <p className="text-sm font-semibold text-white mb-3">Score Radar</p>
+            <div className="flex justify-center">
+              <RadarChart score={atsScore} />
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   )
 }
 
 // =============================================================================
-// Agent Status Panel
+// History View (Glassmorphism)
 // =============================================================================
 
-function AgentStatusPanel({ activeAgentId }: { activeAgentId: string | null }) {
-  const agents = [
-    { id: MANAGER_AGENT_ID, name: 'Resume Coordinator', role: 'Orchestrates pipeline' },
-    { id: ATS_OPTIMIZER_ID, name: 'ATS Optimizer', role: 'Keywords & formatting' },
-    { id: CONTENT_ENHANCEMENT_ID, name: 'Content Enhancer', role: 'Impact & action verbs' },
-    { id: PROFILE_GENERATOR_ID, name: 'Profile Generator', role: 'LinkedIn & job boards' },
-  ]
+function HistoryView({ history, onSelect, onBack }: {
+  history: HistoryItem[]; onSelect: (item: HistoryItem) => void; onBack: () => void
+}) {
+  const [search, setSearch] = useState('')
+  const filtered = history.filter((item) => {
+    const q = search.toLowerCase()
+    return (item?.fileName ?? '').toLowerCase().includes(q) || (item?.targetRole ?? '').toLowerCase().includes(q)
+  })
 
   return (
-    <div className="border-2 border-foreground bg-background">
-      <div className="p-3 bg-muted border-b-2 border-foreground">
-        <p className="font-bold text-xs uppercase tracking-wide">Agent Pipeline</p>
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="w-10 h-10 rounded-lg flex items-center justify-center glass hover:bg-white/10 transition-colors">
+          <FiArrowLeft className="w-5 h-5 text-gray-300" />
+        </button>
+        <h2 className="font-bold text-2xl text-white">Resume History</h2>
       </div>
-      <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-        {agents.map((agent) => {
-          const isActive = activeAgentId === agent.id
-          return (
-            <div key={agent.id} className={`p-2 border-2 ${isActive ? 'border-primary bg-red-50' : 'border-foreground'}`}>
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <div className={`w-2 h-2 flex-shrink-0 ${isActive ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-                <p className="font-bold text-xs truncate">{agent.name}</p>
+
+      <div className="relative mb-6">
+        <FiSearch className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+        <input
+          placeholder="Search by file name or target role..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all"
+        />
+      </div>
+
+      {filtered.length === 0 && history.length === 0 && (
+        <div className="glass rounded-xl p-12 text-center">
+          <FiClock className="w-12 h-12 mx-auto mb-4 text-gray-600" />
+          <p className="font-semibold text-lg text-white mb-1">No resumes improved yet</p>
+          <p className="text-sm text-gray-400">Upload your first resume to get started.</p>
+        </div>
+      )}
+
+      {filtered.length === 0 && history.length > 0 && (
+        <div className="glass rounded-xl p-8 text-center">
+          <p className="text-sm text-gray-400">No results match your search.</p>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {filtered.map((item) => (
+          <GlassCard key={item.id} hover onClick={() => onSelect(item)} className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/15 to-cyan-500/15 flex items-center justify-center">
+                <FiFileText className="w-5 h-5 text-purple-400" />
               </div>
-              <p className="text-xs text-muted-foreground truncate">{agent.role}</p>
+              <div>
+                <p className="font-medium text-sm text-white">{item?.fileName ?? 'Unknown file'}</p>
+                <div className="flex items-center gap-3 mt-0.5">
+                  {item?.targetRole && (
+                    <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20">{item.targetRole}</span>
+                  )}
+                  <span className="text-xs text-gray-500">{item?.date ?? ''}</span>
+                </div>
+              </div>
             </div>
-          )
-        })}
+            <div className="flex items-center gap-4">
+              <div className="text-center">
+                <p className="font-bold text-lg bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">{item?.atsScore ?? 0}</p>
+                <p className="text-xs text-gray-500">ATS</p>
+              </div>
+              <FiChevronRight className="w-4 h-4 text-gray-500" />
+            </div>
+          </GlassCard>
+        ))}
       </div>
     </div>
   )
@@ -688,43 +815,31 @@ export default function SmartResumeApp() {
   const [resultData, setResultData] = useState<ResumeResult | null>(null)
   const [moduleOutputs, setModuleOutputs] = useState<ArtifactFile[]>([])
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null)
-  const [showHistory, setShowHistory] = useState(false)
+  const [activeView, setActiveView] = useState<ActiveView>('home')
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [sampleMode, setSampleMode] = useState(false)
   const [historyItem, setHistoryItem] = useState<HistoryItem | null>(null)
 
-  // Load history on mount
+  // Load history
   useEffect(() => {
     try {
       const stored = localStorage.getItem(HISTORY_KEY)
       if (stored) {
         const parsed = JSON.parse(stored)
-        if (Array.isArray(parsed)) {
-          setHistory(parsed)
-        }
+        if (Array.isArray(parsed)) setHistory(parsed)
       }
-    } catch {
-      // ignore parse errors
-    }
+    } catch { /* ignore */ }
   }, [])
 
-  // Save history helper
-  const saveHistory = useCallback(
-    (item: HistoryItem) => {
-      setHistory((prev) => {
-        const updated = [item, ...prev]
-        try {
-          localStorage.setItem(HISTORY_KEY, JSON.stringify(updated))
-        } catch {
-          // ignore storage errors
-        }
-        return updated
-      })
-    },
-    []
-  )
+  const saveHistory = useCallback((item: HistoryItem) => {
+    setHistory((prev) => {
+      const updated = [item, ...prev]
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)) } catch { /* ignore */ }
+      return updated
+    })
+  }, [])
 
-  // Handle submit
+  // Submit
   const handleSubmit = async () => {
     if (!file) return
     setLoading(true)
@@ -735,7 +850,6 @@ export default function SmartResumeApp() {
     setHistoryItem(null)
 
     try {
-      // 1. Upload file
       const uploadResult = await uploadFiles(file)
       if (!uploadResult?.success || !Array.isArray(uploadResult?.asset_ids) || uploadResult.asset_ids.length === 0) {
         setError('File upload failed. Please check your file and try again.')
@@ -744,12 +858,8 @@ export default function SmartResumeApp() {
         return
       }
 
-      // 2. Build message and call agent
       const message = `Please improve the following resume.${targetRole ? ' Target role: ' + targetRole + '.' : ''} Analyze the uploaded resume and provide a comprehensive improvement including ATS optimization, content enhancement, and profile text generation.`
-      const result = await callAIAgent(message, MANAGER_AGENT_ID, {
-        assets: uploadResult.asset_ids,
-      })
-
+      const result = await callAIAgent(message, MANAGER_AGENT_ID, { assets: uploadResult.asset_ids })
       setActiveAgentId(null)
 
       if (!result?.success) {
@@ -758,40 +868,28 @@ export default function SmartResumeApp() {
         return
       }
 
-      // 3. Parse response - handle both string and object
       let data = result?.response?.result
       if (typeof data === 'string') {
-        try {
-          data = JSON.parse(data)
-        } catch {
-          data = { improved_resume: data }
-        }
+        try { data = JSON.parse(data) } catch { data = { improved_resume: data } }
       }
 
       const parsedData: ResumeResult = data ?? {}
       setResultData(parsedData)
 
-      // 4. Extract module outputs at TOP LEVEL
-      const artifacts = Array.isArray(result?.module_outputs?.artifact_files)
-        ? result.module_outputs.artifact_files
-        : []
+      const artifacts = Array.isArray(result?.module_outputs?.artifact_files) ? result.module_outputs.artifact_files : []
       setModuleOutputs(artifacts)
 
-      // 5. Save to history
       const histEntry: HistoryItem = {
         id: Date.now().toString() + Math.random().toString(36).slice(2, 8),
         fileName: file.name,
         targetRole: targetRole,
         atsScore: parsedData?.ats_score ?? 0,
-        date: new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric',
-        }),
+        date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         result: parsedData,
         moduleOutputs: artifacts,
       }
       saveHistory(histEntry)
+      setActiveView('results')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
       setActiveAgentId(null)
@@ -801,16 +899,14 @@ export default function SmartResumeApp() {
     }
   }
 
-  // Handle history item selection
   const handleHistorySelect = (item: HistoryItem) => {
     setHistoryItem(item)
     setResultData(item.result)
     setModuleOutputs(Array.isArray(item?.moduleOutputs) ? item.moduleOutputs : [])
-    setShowHistory(false)
+    setActiveView('results')
     setError(null)
   }
 
-  // Reset to upload view
   const handleReset = () => {
     setFile(null)
     setTargetRole('')
@@ -818,208 +914,237 @@ export default function SmartResumeApp() {
     setModuleOutputs([])
     setError(null)
     setHistoryItem(null)
+    setActiveView('home')
   }
 
-  // Current display data (sample or real)
   const displayData = sampleMode ? SAMPLE_RESULT : resultData
   const displayOutputs = sampleMode ? SAMPLE_MODULE_OUTPUTS : moduleOutputs
   const hasResults = displayData !== null
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-sans">
-      {/* Navigation Bar */}
-      <nav className="border-b-2 border-foreground bg-background sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => {
-              setShowHistory(false)
-              handleReset()
-            }}
-          >
-            <div className="w-8 h-8 bg-primary flex items-center justify-center">
-              <FiFileText className="w-4 h-4 text-primary-foreground" />
+    <div className="min-h-screen bg-[hsl(230,25%,7%)] text-gray-200 font-sans relative overflow-hidden">
+      {/* Background Blobs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="blob absolute -top-32 -left-32 w-96 h-96 rounded-full bg-purple-500/[0.04] blur-3xl" />
+        <div className="blob-delay absolute top-1/3 -right-48 w-[500px] h-[500px] rounded-full bg-cyan-500/[0.03] blur-3xl" />
+        <div className="blob absolute bottom-0 left-1/3 w-80 h-80 rounded-full bg-purple-600/[0.03] blur-3xl" />
+      </div>
+
+      {/* Navigation */}
+      <nav className="relative z-50 glass border-b border-white/5 sticky top-0">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={handleReset}>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center">
+              <FiFileText className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-lg tracking-tight">SmartResume AI</span>
+            <span className="font-bold text-lg text-white tracking-tight">SmartResume<span className="text-purple-400">AI</span></span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Sample Toggle */}
             <div className="flex items-center gap-2">
-              <label htmlFor="sample-toggle" className="text-xs font-bold uppercase tracking-wide text-muted-foreground cursor-pointer">
-                Sample Data
-              </label>
+              <label htmlFor="sample-toggle" className="text-xs font-medium text-gray-500 cursor-pointer hidden md:block">Sample</label>
               <button
                 id="sample-toggle"
                 role="switch"
                 aria-checked={sampleMode}
-                onClick={() => setSampleMode(!sampleMode)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center border-2 border-foreground transition-colors ${sampleMode ? 'bg-primary' : 'bg-muted'}`}
+                onClick={() => {
+                  setSampleMode(!sampleMode)
+                  if (!sampleMode && activeView === 'home') setActiveView('results')
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ${sampleMode ? 'bg-purple-500' : 'bg-white/10'}`}
               >
-                <span className={`pointer-events-none block h-4 w-4 bg-background border border-foreground transition-transform ${sampleMode ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                <span className={`pointer-events-none block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${sampleMode ? 'translate-x-[18px]' : 'translate-x-[3px]'}`} />
               </button>
             </div>
+            {/* History Button */}
             <button
-              onClick={() => setShowHistory(!showHistory)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 border-2 font-bold text-sm transition-colors ${showHistory ? 'border-foreground bg-foreground text-background' : 'border-foreground hover:bg-muted'}`}
+              onClick={() => setActiveView(activeView === 'history' ? 'home' : 'history')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+                ${activeView === 'history' ? 'bg-gradient-to-r from-purple-500/20 to-cyan-500/20 text-white border border-purple-500/30' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
             >
               <FiClock className="w-3.5 h-3.5" />
-              History
+              <span className="hidden md:inline">History</span>
+              {history.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-purple-500/20 text-purple-300">{history.length}</span>
+              )}
             </button>
           </div>
         </div>
       </nav>
 
       {/* History View */}
-      {showHistory && (
-        <HistoryView
-          history={history}
-          onSelect={handleHistorySelect}
-          onBack={() => setShowHistory(false)}
-        />
+      {activeView === 'history' && (
+        <div className="relative z-10">
+          <HistoryView history={history} onSelect={handleHistorySelect} onBack={() => setActiveView('home')} />
+        </div>
       )}
 
-      {/* Main Content */}
-      {!showHistory && (
-        <main className="max-w-4xl mx-auto px-6 py-8">
-          {/* Upload Section - show if no results and not loading */}
-          {!hasResults && !loading && (
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="text-center mb-8">
-                <h1 className="font-bold text-4xl tracking-tight mb-2">Optimize Your Resume</h1>
-                <p className="text-muted-foreground text-base max-w-lg mx-auto leading-relaxed">
-                  Upload your resume and our AI pipeline will optimize it for ATS systems, enhance content with impact metrics, and generate professional profile texts.
-                </p>
+      {/* Home View */}
+      {activeView === 'home' && !loading && (
+        <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 py-10">
+          <div className="space-y-10">
+            {/* Hero */}
+            <div className="text-center max-w-2xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 mb-5">
+                <HiOutlineSparkles className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-medium text-purple-300">AI-Powered Resume Optimization</span>
+              </div>
+              <h1 className="font-bold text-3xl md:text-5xl text-white tracking-tight mb-3 leading-tight">
+                Transform Your Resume with <span className="gradient-text">AI Intelligence</span>
+              </h1>
+              <p className="text-gray-400 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
+                Upload your resume and our multi-agent AI pipeline will optimize it for ATS systems, enhance content with quantified achievements, and generate professional profile texts.
+              </p>
+            </div>
+
+            {/* Upload Card */}
+            <GlassCard className="max-w-2xl mx-auto p-6 space-y-5">
+              <FileDropzone file={file} onFileSelect={setFile} onRemove={() => setFile(null)} disabled={loading} />
+
+              <div>
+                <label htmlFor="target-role" className="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                  Target Role (Optional)
+                </label>
+                <input
+                  id="target-role"
+                  placeholder="e.g., Senior Product Manager"
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/20 transition-all"
+                  disabled={loading}
+                />
               </div>
 
-              {/* Dropzone Card */}
-              <Card className="border-2 border-foreground shadow-none">
-                <CardContent className="p-6 space-y-4">
-                  <FileDropzone
-                    file={file}
-                    onFileSelect={setFile}
-                    onRemove={() => setFile(null)}
-                    disabled={loading}
-                  />
-
-                  {/* Target Role Input */}
-                  <div>
-                    <Label htmlFor="target-role" className="font-bold text-sm uppercase tracking-wide mb-2 block">
-                      Target Role (Optional)
-                    </Label>
-                    <Input
-                      id="target-role"
-                      placeholder="e.g., Senior Product Manager"
-                      value={targetRole}
-                      onChange={(e) => setTargetRole(e.target.value)}
-                      className="border-2 border-foreground h-11 font-sans"
-                      disabled={loading}
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={!file || loading}
-                    className="w-full h-12 bg-primary text-primary-foreground font-bold text-base border-2 border-foreground hover:bg-red-700 disabled:opacity-40"
-                  >
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <AiOutlineLoading3Quarters className="w-5 h-5 animate-spin" />
-                        Optimizing your resume...
-                      </span>
-                    ) : (
-                      'Improve My Resume'
-                    )}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Error */}
-              {error && (
-                <div className="border-2 border-primary bg-red-50 p-4">
-                  <p className="font-bold text-sm text-red-700 mb-1">Error</p>
-                  <p className="text-sm text-red-600">{error}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSubmit}
-                    disabled={!file}
-                    className="mt-3 border-2 border-foreground font-bold text-xs"
-                  >
-                    Retry
-                  </Button>
-                </div>
-              )}
-
-              {/* Agent Status */}
-              <AgentStatusPanel activeAgentId={activeAgentId} />
-            </div>
-          )}
-
-          {/* Loading State */}
-          {loading && (
-            <div className="space-y-6">
-              <div className="border-2 border-foreground p-12 text-center">
-                <AiOutlineLoading3Quarters className="w-12 h-12 animate-spin mx-auto mb-4" />
-                <p className="font-bold text-xl mb-1">Optimizing your resume</p>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Our AI agents are analyzing, optimizing, and enhancing your resume. This may take a moment.
-                </p>
-                <div className="max-w-xs mx-auto">
-                  <div className="w-full h-1 bg-muted border border-foreground overflow-hidden">
-                    <div className="h-full bg-primary animate-pulse" style={{ width: '60%' }} />
-                  </div>
-                </div>
-              </div>
-              <AgentStatusPanel activeAgentId={activeAgentId} />
-            </div>
-          )}
-
-          {/* Results */}
-          {hasResults && !loading && (
-            <div className="space-y-6">
-              {/* Back / Title Row */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleReset}
-                    className="w-10 h-10 border-2 border-foreground flex items-center justify-center hover:bg-muted transition-colors"
-                  >
-                    <FiArrowLeft className="w-5 h-5" />
-                  </button>
-                  <div>
-                    <h2 className="font-bold text-2xl">
-                      {historyItem ? historyItem.fileName : file?.name ?? 'Resume Results'}
-                    </h2>
-                    {(historyItem?.targetRole || targetRole) && (
-                      <Badge variant="outline" className="border border-foreground text-xs font-medium mt-1">
-                        {historyItem?.targetRole ?? targetRole}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                {sampleMode && (
-                  <Badge className="bg-accent text-accent-foreground font-bold text-xs border-2 border-foreground">
-                    SAMPLE DATA
-                  </Badge>
+              <button
+                onClick={handleSubmit}
+                disabled={!file || loading}
+                className="w-full py-3 rounded-xl font-semibold text-sm text-white glow-btn disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none transition-all duration-300"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <AiOutlineLoading3Quarters className="w-4 h-4 animate-spin" />
+                    Optimizing your resume...
+                  </span>
+                ) : (
+                  'Improve My Resume'
                 )}
+              </button>
+            </GlassCard>
+
+            {/* Error */}
+            {error && (
+              <div className="max-w-2xl mx-auto glass rounded-xl p-4 border border-red-500/20 bg-red-500/5">
+                <p className="text-sm font-semibold text-red-400 mb-1">Error</p>
+                <p className="text-sm text-red-300">{error}</p>
+                <button onClick={handleSubmit} disabled={!file} className="mt-3 px-4 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 border border-red-500/20 text-red-300 hover:bg-red-500/20 transition-all">
+                  Retry
+                </button>
               </div>
+            )}
 
-              {/* Results Panel */}
-              <ResultsPanel data={displayData!} moduleOutputs={displayOutputs} />
-
-              {/* Error */}
-              {error && (
-                <div className="border-2 border-primary bg-red-50 p-4">
-                  <p className="font-bold text-sm text-red-700 mb-1">Error</p>
-                  <p className="text-sm text-red-600">{error}</p>
-                </div>
-              )}
-
-              {/* Agent Status */}
-              <AgentStatusPanel activeAgentId={activeAgentId} />
+            {/* Agent Pipeline */}
+            <div className="max-w-2xl mx-auto">
+              <AgentPipeline activeAgentId={activeAgentId} />
             </div>
-          )}
+
+            {/* Features Grid */}
+            <div>
+              <div className="text-center mb-6">
+                <h2 className="font-bold text-xl text-white">Powerful Features</h2>
+                <p className="text-sm text-gray-400 mt-1">Everything you need to land your dream job</p>
+              </div>
+              <FeatureSection />
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { value: '50K+', label: 'Resumes Optimized' },
+                { value: '92%', label: 'Avg ATS Score' },
+                { value: '3x', label: 'More Interviews' },
+                { value: '4.9', label: 'User Rating' },
+              ].map((stat, i) => (
+                <GlassCard key={i} className="p-5 text-center">
+                  <p className="text-2xl font-bold gradient-text">{stat.value}</p>
+                  <p className="text-xs text-gray-400 mt-1">{stat.label}</p>
+                </GlassCard>
+              ))}
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <main className="relative z-10 max-w-3xl mx-auto px-4 md:px-6 py-16">
+          <div className="space-y-6">
+            <GlassCard className="p-12 text-center">
+              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 flex items-center justify-center">
+                <AiOutlineLoading3Quarters className="w-8 h-8 animate-spin text-purple-400" />
+              </div>
+              <p className="font-bold text-xl text-white mb-2">Optimizing your resume</p>
+              <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
+                Our AI agents are analyzing, optimizing, and enhancing your resume. This typically takes 30-60 seconds.
+              </p>
+              <div className="max-w-xs mx-auto">
+                <div className="w-full h-1.5 rounded-full bg-white/5 overflow-hidden">
+                  <div className="h-full rounded-full animated-gradient" style={{ width: '60%', animation: 'gradientShift 2s ease infinite, pulse 1.5s ease-in-out infinite' }} />
+                </div>
+              </div>
+            </GlassCard>
+            <AgentPipeline activeAgentId={activeAgentId} />
+          </div>
+        </main>
+      )}
+
+      {/* Results View */}
+      {activeView === 'results' && hasResults && !loading && (
+        <main className="relative z-10 max-w-5xl mx-auto px-4 md:px-6 py-8">
+          <div className="space-y-6">
+            {/* Header Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button onClick={handleReset} className="w-10 h-10 rounded-lg flex items-center justify-center glass hover:bg-white/10 transition-colors">
+                  <FiArrowLeft className="w-5 h-5 text-gray-300" />
+                </button>
+                <div>
+                  <h2 className="font-bold text-xl text-white">
+                    {historyItem ? historyItem.fileName : file?.name ?? 'Resume Results'}
+                  </h2>
+                  {(historyItem?.targetRole || targetRole) && (
+                    <span className="text-xs px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-300 border border-purple-500/20 mt-1 inline-block">
+                      {historyItem?.targetRole ?? targetRole}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {sampleMode && (
+                  <span className="px-2.5 py-1 text-xs font-medium rounded-lg bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                    SAMPLE DATA
+                  </span>
+                )}
+                <button onClick={handleReset} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                  <FiRefreshCw className="w-3.5 h-3.5" />
+                  New Resume
+                </button>
+              </div>
+            </div>
+
+            {/* Results Panel */}
+            <ResultsPanel data={displayData!} moduleOutputs={displayOutputs} />
+
+            {/* Error */}
+            {error && (
+              <div className="glass rounded-xl p-4 border border-red-500/20 bg-red-500/5">
+                <p className="text-sm font-semibold text-red-400 mb-1">Error</p>
+                <p className="text-sm text-red-300">{error}</p>
+              </div>
+            )}
+
+            {/* Agent Pipeline */}
+            <AgentPipeline activeAgentId={activeAgentId} />
+          </div>
         </main>
       )}
     </div>
