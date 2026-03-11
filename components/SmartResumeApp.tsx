@@ -820,6 +820,16 @@ export default function SmartResumeApp() {
   const [sampleMode, setSampleMode] = useState(false)
   const [historyItem, setHistoryItem] = useState<HistoryItem | null>(null)
 
+  // Initialize client-side providers (iframe logger, error interceptor)
+  useEffect(() => {
+    import('@/lib/iframeLogger').then(({ initIframeLogger }) => {
+      initIframeLogger()
+    }).catch(() => {})
+    import('@/lib/agent-fetch-interceptor').then(({ installAgentInterceptor }) => {
+      installAgentInterceptor()
+    }).catch(() => {})
+  }, [])
+
   // Load history
   useEffect(() => {
     try {

@@ -1,10 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use standalone output to avoid static prerendering issues with client components
+  // Use standalone output for deployment
   output: 'standalone',
-
-  // Optimize for faster builds
-  swcMinify: true,
 
   // Reduce build time by skipping type checking (run separately)
   typescript: {
@@ -23,9 +20,12 @@ const nextConfig = {
 
   // Enable experimental features for faster dev
   experimental: {
+    // Disable the missing Suspense warning that causes CSR bailout issues
+    missingSuspenseWithCSRBailout: false,
     // Optimize package imports for faster builds
     optimizePackageImports: [
       'lucide-react',
+      'react-icons',
       '@radix-ui/react-accordion',
       '@radix-ui/react-alert-dialog',
       '@radix-ui/react-aspect-ratio',

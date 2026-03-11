@@ -1,44 +1,80 @@
 'use client'
 
-import React, { useState, useEffect, lazy, Suspense } from 'react'
+import React, { Component, type ReactNode } from 'react'
 
-// Lazy load all client-only providers
-const ErrorBoundary = lazy(() => import('@/components/ErrorBoundary'))
-const AgentInterceptorProvider = lazy(() =>
-  import('@/components/AgentInterceptorProvider').then((mod) => ({
-    default: mod.AgentInterceptorProvider,
-  }))
-)
-
-function IframeLoggerLoader() {
-  useEffect(() => {
-    import('@/lib/iframeLogger').then(({ initIframeLogger }) => {
-      initIframeLogger()
-    })
-  }, [])
-  return null
+interface Props {
+  children: ReactNode
 }
 
-export default function ClientProviders({ children }: { children: React.ReactNode }) {
-  const [mounted, setMounted] = useState(false)
+interface State {
+  mounted: boolean
+  hasError: boolean
+  Providers: React.ComponentType<{ children: ReactNode }> | null
+}
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // During SSR/prerendering, just render children without any providers
-  if (!mounted) {
-    return <>{children}</>
+/**
+ * ClientProviders wraps children with ErrorBoundary, AgentInterceptorProvider,
+ * and IframeLogger ONLY on the client side after mount.
+ *
+ * Uses a class component to avoid useContext/useState hook issues during
+ * Next.js static page generation (prerendering).
+ */
+export default class ClientProviders extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props)
+    this.state = {
+      mounted: false,
+      hasError: false,
+      Providers: null,
+    }
   }
 
-  return (
-    <Suspense fallback={<>{children}</>}>
-      <ErrorBoundary>
-        <AgentInterceptorProvider>
-          <IframeLoggerLoader />
-          {children}
-        </AgentInterceptorProvider>
-      </ErrorBoundary>
-    </Suspense>
-  )
+  componentDidMount() {
+    this.setState({ mounted: true })
+
+    // Dynamically load providers only on the client
+    Promise.all([
+      import('@/components/ErrorBoundary'),
+      import('@/components/AgentInterceptorProvider'),
+      import('@/lib/iframeLogger'),
+    ])
+      .then(([ebModule, aipModule, loggerModule]) => {
+        const EB = ebModule.default
+        const AIP = aipModule.AgentInterceptorProvider
+
+        // Initialize iframe logger
+        if (loggerModule.initIframeLogger) {
+          loggerModule.initIframeLogger()
+        }
+
+        // Create a combined provider component
+        const Combined = ({ children }: { children: ReactNode }) => (
+          <EB>
+            <AIP>{children}</AIP>
+          </EB>
+        )
+
+        this.setState({ Providers: Combined })
+      })
+      .catch((err) => {
+        console.warn('[ClientProviders] Failed to load providers:', err)
+      })
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('[ClientProviders] Error caught:', error)
+    this.setState({ hasError: true })
+  }
+
+  render() {
+    const { children } = this.props
+    const { mounted, Providers } = this.state
+
+    // During SSR or before mount, render children directly
+    if (!mounted || !Providers) {
+      return <>{children}</>
+    }
+
+    return <Providers>{children}</Providers>
+  }
 }
